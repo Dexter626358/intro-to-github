@@ -1,0 +1,198 @@
+import random
+import sqlite3
+
+with sqlite3.connect('card.s3db') as conn:
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE if not exists card 
+                (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                number TEXT, 
+                pin TEXT, 
+                balance INTEGER DEFAULT 0)""")
+    conn.commit()
+card_number_dict = {}
+
+
+def main_screen():
+    print('1. Create an account', '2. Log into account', '0. Exit', sep='\n')
+    entre = int(input())
+    if entre == 1:
+        creation_an_account()
+    elif entre == 2:
+        account_login()
+    else:
+        print('Bye!')
+        exit()
+
+
+def account_balance():
+    print('1. Balance', '2. Add income', '3. Do transfer', '4. Close account', '5. Log out', '0. Exit', sep='\n')
+    entre = int(input())
+    if entre == 1:
+        display_balance()
+
+    elif entre == 2:
+        add_income()
+
+    elif entre == 3:
+        do_transfer()
+
+    elif entre == 4:
+        close_account()
+
+    elif entre == 5:
+        log_out()
+
+    else:
+        print('Bye!')
+        exit()
+
+
+def creation_an_account():
+    previous_card_number = '400000' + str(random.randint(100000000, 999999999))
+    checksum_count = 0
+    list_numbers = list(map(int, previous_card_number))
+    for count, num in enumerate(list_numbers):
+        if count % 2 == 0:
+            buffer = num * 2
+            if buffer > 9:
+                buffer -= 9
+            checksum_count += buffer
+        else:
+            checksum_count += num
+
+    if checksum_count % 10 == 0:
+        checksum = 0
+    else:
+        checksum = 10 - checksum_count % 10
+    card_number = int(previous_card_number + str(checksum))
+    pin = str(random.randint(1000, 9999))
+    card_number_dict[card_number] = str(pin)
+    print('Your card has been created', 'Your card number:', card_number, "Your card PIN:",
+          card_number_dict[card_number], sep='\n')
+    cur.execute("INSERT INTO card (number, pin) VALUES (?,?)", (card_number, pin,))
+    conn.commit()
+    main_screen()
+    card_number_dict.update({card_number: pin})
+
+
+def account_login():
+    print('Enter your card number:')
+    global card_number_1
+    card_number_1 = int(input())
+
+    print('Enter your PIN:')
+    global pin_1
+    pin_1 = int(input())
+    cur.execute("SELECT number FROM card WHERE number = ? AND pin = ?", (card_number_1, pin_1))
+    data = cur.fetchall()
+    if len(data) > 0:
+        print('')
+        print('You have successfully logged in!')
+        print('')
+        account_balance()
+    else:
+        print('Wrong card number or PIN!')
+        print('')
+    print(main_screen())
+
+
+def display_balance():
+    global acc_balance
+    query = cur.execute("SELECT number, pin, balance FROM card WHERE number = ?", (str(card_number_1),)).fetchall()
+    acc_balance = int(query[0][2])
+    print(f"\nBalance: {query[0][2]}")
+    account_balance()
+
+
+def log_out():
+    print('\nYou have successfully logged out!')
+    print('')
+    main_screen()
+
+def add_income():
+    print('Enter income:')
+    query = cur.execute("SELECT number, pin, balance FROM card WHERE number = ?", (str(card_number_1),)).fetchall()
+    acc_balance = int(query[0][2])
+    income = int(input())
+    income += acc_balance
+    acc_balance = income
+    sql_update_query = """Update card set balance = ? where number = ?"""
+    data = (income, str(card_number_1))
+    cur.execute(sql_update_query, data)
+    conn.commit()
+    print('Income was added!')
+    print('')
+    account_balance()
+
+def do_transfer():
+    print("Transfer")
+    print('Enter your card number:')
+    global card_number_transfer
+    card_number_transfer = input()
+    luhn_algorithm()
+    if checksum % 10 != 0:
+        print("Probably you made a mistake in the card number. Please try again!")
+        account_balance()
+    quer = cur.execute("SELECT number, pin, balance FROM card WHERE number = ?",
+                       (card_number_transfer,)).fetchall()
+    if quer:
+        if card_number_transfer == card_number_1:
+            print("You can't transfer money to the same account!")
+            account_balance()
+        else:
+            print("Enter how much money you want to transfer:")
+            transfer_money = int(input())
+    else:
+        print('Such a card does not exist.')
+        account_balance()
+    query = cur.execute("SELECT number, pin, balance FROM card WHERE number = ?", (str(card_number_1),)).fetchall()
+    acc_balance = int(query[0][2])
+
+    if transfer_money > acc_balance:
+        print("Not enough money!")
+        account_balance()
+    else:
+        query = cur.execute("SELECT number, pin, balance FROM card WHERE number = ?", (str(card_number_transfer),)).fetchall()
+        acc_balance = int(query[0][2])
+        acc_balance += transfer_money
+        sql_update_query = """Update card set balance = ? where number = ?"""
+        data = (acc_balance, str(card_number_transfer))
+        cur.execute(sql_update_query, data)
+
+        query = cur.execute("SELECT number, pin, balance FROM card WHERE number = ?",
+                            (str(card_number_1),)).fetchall()
+        acc_balance = int(query[0][2])
+        acc_balance -= transfer_money
+        sql_update_query = """Update card set balance = ? where number = ?"""
+        data = (acc_balance, str(card_number_1))
+        cur.execute(sql_update_query, data)
+        conn.commit()
+        print('Success!')
+        print('')
+        account_balance()
+
+def close_account():
+    cur.execute("DELETE FROM card WHERE number = ? AND pin = ?", (card_number_1, pin_1))
+    conn.commit()
+    print("The account has been closed!")
+    print('')
+    main_screen()
+
+def luhn_algorithm():
+    if len(card_number_transfer) == 16:
+        global checksum
+        checksum = 0
+        list_numbers = list(map(int, card_number_transfer))
+        for count, num in enumerate(list_numbers):
+            if count % 2 == 0:
+                buffer = num * 2
+                if buffer > 9:
+                    buffer -= 9
+                checksum += buffer
+            else:
+                checksum += num
+
+
+
+main_screen()
+
