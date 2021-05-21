@@ -1,0 +1,141 @@
+formater_list =['plain',
+                'bold',
+                'italic',
+                'header',
+                'link',
+                'inline-code',
+                'new-line',
+                'ordered-list',
+                'unordered-list']
+
+stored_string = []
+
+
+def plain():
+    text_input = input("- Text: ")
+    stored_string.append(text_input)
+    print_string()
+
+def bold():
+    text_input = input("- Text: ")
+    stored_string.append(f'**{text_input}**')
+    print_string()
+
+def italic():
+    text_input = input("- Text: ")
+    stored_string.append(f'*{text_input}*')
+    print_string()
+
+
+def header():
+    lvl = 0
+    text_input = ""
+
+    while lvl < 1 or lvl > 6:
+        lvl = int(input("Level: "))
+        text_input = input("- Text: ")
+
+    stored_string.append(f"{'#' * lvl} {text_input}\n")
+    print_string()
+
+def link():
+    label = input('Label:')
+    url = input('URL:')
+    stored_string.append("[" + label + "]" + "(" + url + ")")
+    print_string()
+
+def inline_code():
+    text_input = input("- Text: ")
+    stored_string.append("`" + text_input + "`")
+    print_string()
+
+
+def new_line():
+    stored_string.append("\n")
+    print_string()
+
+def create_list(ordered=False):
+
+    rows = 0
+    #stored_string = []
+
+    while rows < 1:
+
+        rows = int(input("Number of rows: "))
+
+        if rows < 1:
+
+            print("The number of rows should be greater than zero")
+
+    for i in range(1, rows + 1):
+
+        row = input(f"Row #{i}: ")
+
+        if ordered:
+
+            stored_string.append(f"{i}. {row}\n")
+
+
+        else:
+
+            stored_string.append(f"* {row}\n")
+        print_string()
+def ordered_list():
+
+    return create_list(ordered=True)
+
+def conv_txt_file():
+    f = open('output.md', 'w')
+    for line in stored_string:
+        f.write(line)
+    f.close()
+
+
+def command():
+    user_input = input("- Choose a formatter: ")
+    if user_input == "!help":
+        print("Available formatters: plain bold italic header link inline-code new-line unordered-list ordered-list")
+        print("Special commands: !help !done")
+        command()
+    elif user_input == 'plain':
+        plain()
+        command()
+    elif user_input == 'bold':
+        bold()
+        command()
+    elif user_input == 'inline-code':
+        inline_code()
+        command()
+    elif user_input == 'italic':
+        italic()
+        command()
+    elif user_input == 'header':
+        header()
+        command()
+    elif user_input == 'link':
+        link()
+        command()
+    elif user_input =='new-line':
+        new_line()
+        command()
+    elif user_input == "!done":
+        conv_txt_file()
+        exit()
+    elif user_input =='ordered-list':
+        ordered_list()
+        command()
+    elif user_input =='unordered-list':
+        create_list()
+        command()
+    else:
+        print("Unknown formatting type or command. Please try again.")
+        command()
+
+def print_string():
+    print("".join(stored_string))
+
+command()
+
+
+
+
